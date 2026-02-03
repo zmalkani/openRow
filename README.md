@@ -1,1 +1,1 @@
-# openRow---Rowing-Telemetry-System-
+# openRow - Rowing Telemetry System
