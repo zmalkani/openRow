@@ -1,4 +1,4 @@
-//Project: openRow V4 Software for ESP32
+//Project: openRow V5 Software for ESP32 on protoboard
 //Author : Zach Malkani '27
 //MCU: ESP32 (Core0: Display Writing, Core1: Data Gathering)
 
@@ -9,10 +9,11 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
-#include <HX711.h>
+#include <Adafruit_NAU7802.h>
 
 //graphics
-#include "openrow_logo_120x90.h" //logo bitmap
+#include "openrow_logo_120x90.h"  //logo bitmap
+
 
 //tft defs
 #define TFT_cs 12
@@ -22,27 +23,28 @@
 #define TFT_sck 25
 #define TFT_miso 32
 
-//hx711 defs
-#define HX_data 23
-#define HX_sck 22
-const uint32_t HX_cb = 837031.06;  //calibration factor
-#define HX_tare 33                  //tare button pin
+//NAU7802 defs
+int32_t zeroOffset = -3656;
+float cbFactor = 6982.8716;
 
 #define baud 115200
 float Vbatt;
 #define battPin 0
 
 float currentForce;
-uint8_t xCpos;
-uint8_t yCpos;
+float lastForce;
+uint32_t lastMillis;
+uint8_t xPos = 10;
+uint8_t yPos = 0;
+float yankThreshold = 0.05;
 
 volatile bool newSPM = false;
 volatile uint8_t currentSPM;
 uint8_t lastSPM;
 uint8_t SPMbuffer = 3;
-uint8_t SPMi =0;
+uint8_t SPMi = 0;
 float mpuXthreshold = 30;
-float mpuYthreshold = 30;
+float mpuYthreshold = 25;
 float mpuZthreshold = 30;
 float resThreshold = 4;
 
@@ -58,22 +60,25 @@ bool lastLoopStroke = false;
 bool firstStroke = true;
 uint32_t cT;
 uint32_t lastInputTime;
-uint8_t dbDelay = 400;
+uint8_t dbDelay = 800;
 float rawSPM;
 
 // Impulse logic variables
-uint32_t impulseStartTime = 0; 
+uint32_t impulseStartTime = 0;
 bool checkingImpulse = false;
-uint32_t impulseThreshold = 30; // ms acceleration must stay above threshold
+uint32_t impulseThreshold = 30;  // ms acceleration must stay above threshold
+
+SemaphoreHandle_t tftMutex;
 
 //initialize input objects
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_cs, TFT_dc, TFT_mosi, TFT_sck, TFT_rst, TFT_miso);
-HX711 s1;
-Adafruit_MPU6050 mpu;
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_cs, TFT_dc, TFT_mosi, TFT_sck, TFT_rst, TFT_miso);  // display
+Adafruit_NAU7802 nau;                                                                           //load cell amp.
+Adafruit_MPU6050 mpu;                                                                           //accelerometer
 
-void displayTask(void *pvParameters){
-  for(;;){
-    if (newSPM){
+
+void displayTask(void *pvParameters) {
+  for (;;) {  //empty conditions -> infinite loop
+    if (newSPM) {
       writeSPM(currentSPM);
       newSPM = false;
     }
@@ -81,26 +86,42 @@ void displayTask(void *pvParameters){
   }
 }
 
-void writeSPM(uint8_t spm){
-  tft.setCursor(10,155);
+void writeSPM(uint8_t spm) {
+  tft.setCursor(10, 155);
   tft.setTextSize(8);
-  tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE); 
-  spm = constrain(spm, 0, 99); 
+  tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+  spm = constrain(spm, 0, 99);
   tft.print(spm);
 }
 
 void setup() {
   Serial.begin(baud);
-  s1.begin(HX_data, HX_sck);
-  s1.set_scale(HX_cb);
-  s1.tare();
 
   Wire.begin(18, 19);
+
+  //try init. both i2c devices (mpu, load cell amp.)
   if (!mpu.begin()) {
     Serial.println("MPU startup error");
-    while (1) { delay(10); }
+    while (1) {
+      delay(10);
+    }
   }
+  if (!nau.begin()) {
+    Serial.println("NAU7802 failed");
+    while (1) {
+      delay(10);
+    }
+  }
+
   mpu.setAccelerometerRange(MPU6050_RANGE_4_G);
+
+  nau.setGain(NAU7802_GAIN_128);
+  nau.setRate(NAU7802_RATE_320SPS);
+  while (!nau.calibrate(NAU7802_CALMOD_INTERNAL))
+    ;
+  delay(100);
+
+  zeroOffset = nau.read();  //read zero
 
   tft.begin();
   tft.setRotation(1);
@@ -109,92 +130,127 @@ void setup() {
   delay(1000);
 
   tft.setTextColor(ILI9341_BLACK);
-  tft.setCursor(10,150);
+  tft.setCursor(10, 150);
   tft.setTextSize(3);
   tft.println("openRow");
-  tft.setCursor(10,180);
+  tft.setCursor(10, 180);
   tft.setTextSize(1);
   tft.println("Author: Zach Malkani - ACES '27");
-  tft.setCursor(10,190);
+  tft.setCursor(10, 190);
   tft.print("V4 Firmware - Prototype Hardware");
   delay(2000);
   tft.fillScreen(ILI9341_WHITE);
 
   tft.setTextColor(ILI9341_BLACK);
-  tft.setCursor(2,60);
+  tft.setCursor(2, 60);
   tft.setTextSize(1);
   tft.print("N");
-  tft.setCursor(140,121);
+  tft.setCursor(140, 121);
   tft.print("time (s)");
-  tft.drawRect(10, 5, 300, 115, ILI9341_BLACK); 
-  tft.drawRect(11, 6, 298, 113, ILI9341_BLACK); 
+  tft.drawRect(10, 5, 300, 115, ILI9341_BLACK);
+  tft.drawRect(11, 6, 298, 113, ILI9341_BLACK);
 
   tft.drawRGBBitmap(180, 140, openrow_logo, LOGO_W, LOGO_H);
-  
+
   tft.drawLine(0, 130, 320, 130, ILI9341_BLACK);
-  tft.drawRect(0,131,109,109, ILI9341_BLACK);
-  tft.setCursor(40,220);
-  tft.setTextSize(2); 
+  tft.drawRect(0, 131, 109, 109, ILI9341_BLACK);
+  tft.setCursor(40, 220);
+  tft.setTextSize(2);
   tft.print("spm");
-  tft.setCursor(10,155);
+  tft.setCursor(10, 155);
   tft.setTextSize(8);
   tft.setTextColor(ILI9341_BLACK);
-  tft.print("09");
+  tft.print("00");
 
+  tftMutex = xSemaphoreCreateMutex();
   xTaskCreatePinnedToCore(displayTask, "DisplayTask", 10000, NULL, 1, NULL, 0);
 }
 
 void loop() {
-  //print out force reading in serial
-  s1.read(); 
-  currentForce = s1.get_units(1) * 9.81;
-  Serial.println("currentForce: "+(String)currentForce+"N");
-
-
-
-
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-  accX = abs(a.acceleration.x);
-  accY = abs(a.acceleration.y);
-  accZ = abs(a.acceleration.z);
   cT = millis();
+  //print out force reading in serial when nau is available to avoid hanging
+  if (nau.available()) {
+    // convert raw reading to newtons w/ formula :   ((raw - rawoffset) / calibration factor) * conversion to N
+    currentForce = ((nau.read() - zeroOffset) / cbFactor) * 9.81;
+  }
+  Serial.println(currentForce);
 
-  // Determine if threshold is met
-  bool overThreshold = (accX > mpuXthreshold || accZ > mpuZthreshold || accY > mpuYthreshold);
+
+  //convert force reading into pixel scale
+  yPos = 120 - (currentForce * (115.0 / 1000.0));  // CHANGE DENOMENATOR TO CHANGE Y-AXIS SCALE
+
+  xPos++;  //x increment
+  //wrap around x axis
+  if (xPos > 355) {
+    xPos = 10;
+  }
+
+  //if no input reset to start
+  if (currentForce < 15) {
+    xPos = 10;
+  }
+
+  yPos = constrain(yPos, 5, 118);
+
+  if (xSemaphoreTake(tftMutex, pdMS_TO_TICKS(10))) {
+    tft.drawFastVLine((xPos + 1), 7, 111, ILI9341_WHITE);
+    tft.drawPixel(xPos, yPos, ILI9341_RED);
+    xSemaphoreGive(tftMutex);
+  }
+
+  //refresh screen if quiet for a while
+  static uint32_t timeZeroForce = 0;
+  if (currentForce < 10) {
+    if (timeZeroForce == 0) { timeZeroForce = millis(); }
+    if (millis() - timeZeroForce > 5000) {
+      if (xSemaphoreTake(tftMutex, portMAX_DELAY)) {
+        tft.fillRect(12, 7, 296, 111, ILI9341_WHITE);
+        xSemaphoreGive(tftMutex);
+      }
+      timeZeroForce = 0;
+    }
+  } else {
+    timeZeroForce = 0;
+  }
+
+
+
+
+  // Determine if threshold is met w/ REAL si unit name "yank" - meaning the 1st derivative of force (N/s)
+
+  float yank = 0;
+  uint32_t dt = cT - lastMillis;
+  if (dt >= 5) {
+    yank = (currentForce - lastForce) / (float)dt;
+  }
+  //bool overThreshold = (yank > yankThreshold);
+  //Serial.println(yank);
+
+  bool overThreshold = (currentForce > 100 && lastForce <= 100);
 
   if (overThreshold && !lastLoopStroke) {
-    if (!checkingImpulse) {
-      // Catch the initial timestamp
-      impulseStartTime = cT;
-      checkingImpulse = true;
-    } 
-    else if (cT - impulseStartTime >= impulseThreshold) {
-      // Verified sustained pull
-      if (cT - lastInputTime > dbDelay) {
-        if (lastInputTime != 0 || firstStroke) {
-          firstStroke = false;
-          Serial.println("STROKE" + (String)cT);
-          uint32_t dT = cT - lastInputTime;
-          rawSPM = 60000.0 / (float)dT;
-          lastInputTime = cT;
-          lastLoopStroke = true; 
-          checkingImpulse = false;
-        }
+    //Serial.println("OVER THRESHOLD");
+    if (cT - lastInputTime > dbDelay) {
+      //Serial.println("PAST DEBOUNCE");
+      if (lastInputTime != 0 || firstStroke) {
+        Serial.println("STROKE DETECTED");
+        firstStroke = false;
+        uint32_t dT = cT - lastInputTime;
+        rawSPM = 60000.0 / (float)dT;
+        lastInputTime = cT;
+        lastLoopStroke = true;
       }
     }
   } else {
-    // Drop logic: reset timer and allow new stroke once physical force is gone
-    checkingImpulse = false;
-    if (!overThreshold) {
+    if (currentForce < 30) {
       lastLoopStroke = false;
     }
   }
 
   // Update Display via Core 0
   currentSPM = (uint8_t)rawSPM;
-  if ((currentSPM != lastSPM) && SPMi < SPMbuffer) {
-    newSPM = true;
+  if (currentSPM != lastSPM) {
+    writeSPM(currentSPM);
     lastSPM = currentSPM;
   }
 
