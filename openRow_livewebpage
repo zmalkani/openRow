@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openRow Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #111111;
+    --border: #222222;
+    --accent: #e63329;
+    --accent2: #ff6b35;
+    --text: #f0ece4;
+    --muted: #555;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Barlow Condensed', sans-serif;
+  }
+ 
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--display);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+ 
+  /* Subtle grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+ 
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+ 
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 120px;
+    height: 2px;
+    background: var(--accent);
+  }
+ 
+  .logo {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+ 
+  .logo span {
+    color: var(--accent);
+  }
+ 
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+ 
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+ 
+  .status-dot.connected { background: #4ade80; box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite; }
+  .status-dot.connecting { background: var(--accent2); animation: blink 0.5s infinite; }
+ 
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+ 
+  .connect-btn {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+ 
+  .connect-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    z-index: -1;
+  }
+ 
+  .connect-btn:hover { color: #fff; }
+  .connect-btn:hover::before { transform: translateX(0); }
+  .connect-btn:disabled { border-color: var(--muted); color: var(--muted); cursor: not-allowed; }
+  .connect-btn:disabled::before { display: none; }
+ 
+  .connect-btn.connected {
+    border-color: #4ade80;
+    color: #4ade80;
+  }
+  .connect-btn.connected::before { background: #4ade80; }
+  .connect-btn.connected:hover { color: #000; }
+ 
+  /* UUID config */
+  .config-bar {
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+ 
+  .config-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+ 
+  .config-input {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    flex: 1;
+    min-width: 260px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+ 
+  .config-input:focus { border-color: var(--accent); }
+ 
+  /* Main grid */
+  main {
+    flex: 1;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+  }
+ 
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 28px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+ 
+  .metric-card:hover { border-color: #333; }
+ 
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+ 
+  .metric-card.acc::before { background: #3b82f6; }
+  .metric-card.force::before { background: var(--accent2); }
+  .metric-card.time::before { background: #a855f7; }
+ 
+  .metric-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 8px;
+  }
+ 
+  .metric-value {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 5rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    transition: color 0.15s;
+  }
+ 
+  .metric-value.flash { color: var(--accent) !important; }
+ 
+  .metric-unit {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+  }
+ 
+  .metric-card.spm .metric-value { color: var(--accent); font-size: 7rem; }
+  .metric-card.acc .metric-value { color: #3b82f6; }
+  .metric-card.force .metric-value { color: var(--accent2); }
+  .metric-card.time .metric-value { font-size: 2.2rem; color: #a855f7; font-weight: 300; }
+ 
+  /* Log panel */
+  .log-panel {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 0;
+    overflow: hidden;
+  }
+ 
+  .log-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+ 
+  .clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+  }
+  .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+ 
+  #log {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: #888;
+    height: 160px;
+    overflow-y: auto;
+    padding: 12px 20px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 3px;
+  }
+ 
+  #log::-webkit-scrollbar { width: 4px; }
+  #log::-webkit-scrollbar-track { background: transparent; }
+  #log::-webkit-scrollbar-thumb { background: var(--border); }
+ 
+  .log-entry { display: flex; gap: 16px; }
+  .log-ts { color: #444; min-width: 90px; }
+  .log-data { color: #777; }
+  .log-entry.new .log-data { color: #aaa; }
+ 
+  /* No-BLE warning */
+  .no-ble {
+    display: none;
+    grid-column: 1 / -1;
+    background: #1a0a0a;
+    border: 1px solid #5a1a1a;
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: #ff6b6b;
+    line-height: 1.7;
+  }
+ 
+  footer {
+    padding: 16px 32px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+  }
+ 
+  .hz-counter {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+ 
+  @media (max-width: 600px) {
+    main { grid-template-columns: 1fr; padding: 16px; }
+    .metric-card.spm .metric-value { font-size: 5rem; }
+    .config-bar { padding: 12px 16px; }
+    header { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+ 
+<header>
+  <div class="logo">open<span>Row</span> <span style="font-weight:300;font-size:1rem;color:#555;">LIVE</span></div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">DISCONNECTED</span>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="toggleConnect()">Connect</button>
+  </div>
+</header>
+ 
+<div class="config-bar">
+  <span class="config-label">Service UUID</span>
+  <input class="config-input" id="serviceUUID" value="YOUR-SERVICE-UUID-HERE" spellcheck="false">
+  <span class="config-label">Char UUID</span>
+  <input class="config-input" id="charUUID" value="YOUR-CHAR-UUID-HERE" spellcheck="false">
+</div>
+ 
+<main>
+ 
+  <div class="no-ble" id="noBleWarning">
+    ⚠ Web Bluetooth is not supported in this browser. Please use Chrome on desktop or Android.
+    Safari and Firefox do not support Web Bluetooth.
+  </div>
+ 
+  <div class="metric-card spm">
+    <div class="metric-label">Strokes per Minute</div>
+    <div class="metric-value" id="valSPM">--</div>
+    <div class="metric-unit">SPM</div>
+  </div>
+ 
+  <div class="metric-card acc">
+    <div class="metric-label">Acceleration</div>
+    <div class="metric-value" id="valAcc">--</div>
+    <div class="metric-unit">m/s²  resultant</div>
+  </div>
+ 
+  <div class="metric-card force">
+    <div class="metric-label">Force</div>
+    <div class="metric-value" id="valForce">--</div>
+    <div class="metric-unit">Newtons</div>
+  </div>
+ 
+  <div class="metric-card time">
+    <div class="metric-label">Device Uptime</div>
+    <div class="metric-value" id="valTime">--</div>
+    <div class="metric-unit">ms since boot &nbsp;·&nbsp; <span id="hzDisplay">-- Hz</span></div>
+  </div>
+ 
+  <div class="log-panel">
+    <div class="log-header">
+      <span>Raw Data Log</span>
+      <button class="clear-btn" onclick="clearLog()">Clear</button>
+    </div>
+    <div id="log"></div>
+  </div>
+ 
+</main>
+ 
+<footer>
+  <span>openRow V5 · Web Bluetooth Dashboard</span>
+  <span id="packetCount">0 packets received</span>
+</footer>
+ 
+<script>
+  let device = null;
+  let characteristic = null;
+  let packetCount = 0;
+  let lastPacketTime = 0;
+  let hzSamples = [];
+ 
+  // Check Web Bluetooth support
+  if (!navigator.bluetooth) {
+    document.getElementById('noBleWarning').style.display = 'block';
+    document.getElementById('connectBtn').disabled = true;
+  }
+ 
+  async function toggleConnect() {
+    if (device && device.gatt.connected) {
+      device.gatt.disconnect();
+      onDisconnected();
+    } else {
+      await connect();
+    }
+  }
+ 
+  async function connect() {
+    const serviceUUID = document.getElementById('serviceUUID').value.trim().toLowerCase();
+    const charUUID = document.getElementById('charUUID').value.trim().toLowerCase();
+ 
+    setStatus('connecting');
+    try {
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ name: 'openRow' }],
+        optionalServices: [serviceUUID]
+      });
+ 
+      device.addEventListener('gattserverdisconnected', onDisconnected);
+ 
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(serviceUUID);
+      characteristic = await service.getCharacteristic(charUUID);
+ 
+      await characteristic.startNotifications();
+      characteristic.addEventListener('characteristicvaluechanged', onData);
+ 
+      setStatus('connected');
+      logEntry('system', 'Connected to openRow');
+ 
+    } catch (err) {
+      setStatus('disconnected');
+      logEntry('error', err.message);
+    }
+  }
+ 
+  function onDisconnected() {
+    setStatus('disconnected');
+    logEntry('system', 'Disconnected');
+    characteristic = null;
+  }
+ 
+  function onData(event) {
+    const decoder = new TextDecoder('utf-8');
+    const raw = decoder.decode(event.target.value);
+ 
+    const parts = raw.split(',');
+    if (parts.length >= 4) {
+      const ts    = parts[0].trim();
+      const spm   = parseFloat(parts[1]).toFixed(1);
+      const acc   = parseFloat(parts[2]).toFixed(2);
+      const force = parseFloat(parts[3]).toFixed(1);
+ 
+      flashUpdate('valSPM',   spm);
+      flashUpdate('valAcc',   acc);
+      flashUpdate('valForce', force);
+      document.getElementById('valTime').textContent = parseInt(ts).toLocaleString();
+ 
+      // Hz calculation
+      const now = performance.now();
+      if (lastPacketTime) {
+        hzSamples.push(1000 / (now - lastPacketTime));
+        if (hzSamples.length > 20) hzSamples.shift();
+        const avgHz = hzSamples.reduce((a,b) => a+b, 0) / hzSamples.length;
+        document.getElementById('hzDisplay').textContent = avgHz.toFixed(1) + ' Hz';
+      }
+      lastPacketTime = now;
+ 
+      packetCount++;
+      document.getElementById('packetCount').textContent = packetCount.toLocaleString() + ' packets received';
+ 
+      logEntry('data', raw.trim());
+    }
+  }
+ 
+  function flashUpdate(id, value) {
+    const el = document.getElementById(id);
+    el.textContent = value;
+    el.classList.remove('flash');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 150);
+  }
+ 
+  function setStatus(state) {
+    const dot  = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    const btn  = document.getElementById('connectBtn');
+ 
+    dot.className = 'status-dot ' + state;
+ 
+    if (state === 'connected') {
+      text.textContent = 'CONNECTED';
+      btn.textContent = 'Disconnect';
+      btn.className = 'connect-btn connected';
+    } else if (state === 'connecting') {
+      text.textContent = 'CONNECTING...';
+      btn.textContent = 'Connecting...';
+      btn.className = 'connect-btn';
+      btn.disabled = true;
+    } else {
+      text.textContent = 'DISCONNECTED';
+      btn.textContent = 'Connect';
+      btn.className = 'connect-btn';
+      btn.disabled = false;
+    }
+  }
+ 
+  const logEl = document.getElementById('log');
+  function logEntry(type, msg) {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry new';
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-data">${msg}</span>`;
+    logEl.prepend(entry);
+    setTimeout(() => entry.classList.remove('new'), 500);
+    // Keep log from growing too large
+    while (logEl.children.length > 200) logEl.removeChild(logEl.lastChild);
+  }
+ 
+  function clearLog() {
+    logEl.innerHTML = '';
+    packetCount = 0;
+    document.getElementById('packetCount').textContent = '0 packets received';
+  }
+</script>
+</body>
+</html>
+ 
