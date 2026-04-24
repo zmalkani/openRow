@@ -378,7 +378,7 @@
   </div>
 
   <div class="metric-card time">
-    <div class="metric-label">Device Uptime</div>
+    <div class="metric-label"> Uptime</div>
     <div class="metric-value" id="valTime">--</div>
     <div class="metric-unit">ms since boot &nbsp;·&nbsp; <span id="hzDisplay">-- Hz</span></div>
   </div>
@@ -399,7 +399,7 @@
 </footer>
 
 <script>
-  let device = null;
+  let  = null;
   let characteristic = null;
   let packetCount = 0;
   let lastPacketTime = 0;
@@ -412,8 +412,8 @@
   }
 
   async function toggleConnect() {
-    if (device && device.gatt.connected) {
-      device.gatt.disconnect();
+    if ( && .gatt.connected) {
+      .gatt.disconnect();
       onDisconnected();
     } else {
       await connect();
@@ -427,8 +427,8 @@
     setStatus('connecting');
     try {
       device = await navigator.bluetooth.requestDevice({
-        filters: [{ name: 'openRow' }],
-        optionalServices: [serviceUUID]
+      acceptAllDevices: true,
+      optionalServices: [serviceUUID]
       });
 
       device.addEventListener('gattserverdisconnected', onDisconnected);
