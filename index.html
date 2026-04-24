@@ -341,8 +341,9 @@
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">DISCONNECTED</span>
     </div>
-    <button class="connect-btn" id="connectBtn" onclick="toggleConnect()">Connect</button>
+    <button class="connect-btn" id="connectBtn">Connect</button>
   </div>
+  
 </header>
  
 <div class="config-bar">
@@ -400,6 +401,7 @@
  
 <script>
   let device = null;
+  document.getElementById('connectBtn').addEventListener('click', toggleConnect);
   let characteristic = null;
   let packetCount = 0;
   let lastPacketTime = 0;
