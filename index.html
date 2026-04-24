@@ -17,9 +17,9 @@
     --mono: 'Share Tech Mono', monospace;
     --display: 'Barlow Condensed', sans-serif;
   }
-
+ 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
+ 
   body {
     background: var(--bg);
     color: var(--text);
@@ -29,7 +29,7 @@
     flex-direction: column;
     overflow-x: hidden;
   }
-
+ 
   /* Subtle grain overlay */
   body::before {
     content: '';
@@ -40,7 +40,7 @@
     z-index: 100;
     opacity: 0.4;
   }
-
+ 
   header {
     display: flex;
     align-items: center;
@@ -49,7 +49,7 @@
     border-bottom: 1px solid var(--border);
     position: relative;
   }
-
+ 
   header::after {
     content: '';
     position: absolute;
@@ -59,7 +59,7 @@
     height: 2px;
     background: var(--accent);
   }
-
+ 
   .logo {
     font-family: var(--display);
     font-weight: 800;
@@ -67,11 +67,11 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-
+ 
   .logo span {
     color: var(--accent);
   }
-
+ 
   .status-bar {
     display: flex;
     align-items: center;
@@ -80,7 +80,7 @@
     font-size: 0.75rem;
     color: var(--muted);
   }
-
+ 
   .status-dot {
     width: 8px;
     height: 8px;
@@ -88,13 +88,13 @@
     background: var(--muted);
     transition: background 0.3s;
   }
-
+ 
   .status-dot.connected { background: #4ade80; box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite; }
   .status-dot.connecting { background: var(--accent2); animation: blink 0.5s infinite; }
-
+ 
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
   @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
-
+ 
   .connect-btn {
     font-family: var(--display);
     font-weight: 600;
@@ -110,7 +110,7 @@
     position: relative;
     overflow: hidden;
   }
-
+ 
   .connect-btn::before {
     content: '';
     position: absolute;
@@ -120,19 +120,19 @@
     transition: transform 0.2s;
     z-index: -1;
   }
-
+ 
   .connect-btn:hover { color: #fff; }
   .connect-btn:hover::before { transform: translateX(0); }
   .connect-btn:disabled { border-color: var(--muted); color: var(--muted); cursor: not-allowed; }
   .connect-btn:disabled::before { display: none; }
-
+ 
   .connect-btn.connected {
     border-color: #4ade80;
     color: #4ade80;
   }
   .connect-btn.connected::before { background: #4ade80; }
   .connect-btn.connected:hover { color: #000; }
-
+ 
   /* UUID config */
   .config-bar {
     padding: 12px 32px;
@@ -142,7 +142,7 @@
     align-items: center;
     flex-wrap: wrap;
   }
-
+ 
   .config-label {
     font-family: var(--mono);
     font-size: 0.65rem;
@@ -151,7 +151,7 @@
     letter-spacing: 0.1em;
     white-space: nowrap;
   }
-
+ 
   .config-input {
     font-family: var(--mono);
     font-size: 0.72rem;
@@ -164,9 +164,9 @@
     outline: none;
     transition: border-color 0.2s;
   }
-
+ 
   .config-input:focus { border-color: var(--accent); }
-
+ 
   /* Main grid */
   main {
     flex: 1;
@@ -179,7 +179,7 @@
     width: 100%;
     margin: 0 auto;
   }
-
+ 
   .metric-card {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -188,9 +188,9 @@
     overflow: hidden;
     transition: border-color 0.3s;
   }
-
+ 
   .metric-card:hover { border-color: #333; }
-
+ 
   .metric-card::before {
     content: '';
     position: absolute;
@@ -200,11 +200,11 @@
     background: var(--accent);
     opacity: 0.6;
   }
-
+ 
   .metric-card.acc::before { background: #3b82f6; }
   .metric-card.force::before { background: var(--accent2); }
   .metric-card.time::before { background: #a855f7; }
-
+ 
   .metric-label {
     font-family: var(--mono);
     font-size: 0.65rem;
@@ -213,7 +213,7 @@
     letter-spacing: 0.2em;
     margin-bottom: 8px;
   }
-
+ 
   .metric-value {
     font-family: var(--display);
     font-weight: 800;
@@ -222,9 +222,9 @@
     letter-spacing: -0.02em;
     transition: color 0.15s;
   }
-
+ 
   .metric-value.flash { color: var(--accent) !important; }
-
+ 
   .metric-unit {
     font-family: var(--mono);
     font-size: 0.7rem;
@@ -232,12 +232,12 @@
     margin-top: 6px;
     letter-spacing: 0.1em;
   }
-
+ 
   .metric-card.spm .metric-value { color: var(--accent); font-size: 7rem; }
   .metric-card.acc .metric-value { color: #3b82f6; }
   .metric-card.force .metric-value { color: var(--accent2); }
   .metric-card.time .metric-value { font-size: 2.2rem; color: #a855f7; font-weight: 300; }
-
+ 
   /* Log panel */
   .log-panel {
     grid-column: 1 / -1;
@@ -246,7 +246,7 @@
     padding: 0;
     overflow: hidden;
   }
-
+ 
   .log-header {
     padding: 12px 20px;
     border-bottom: 1px solid var(--border);
@@ -259,7 +259,7 @@
     justify-content: space-between;
     align-items: center;
   }
-
+ 
   .clear-btn {
     background: none;
     border: 1px solid var(--border);
@@ -273,7 +273,7 @@
     transition: all 0.2s;
   }
   .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
-
+ 
   #log {
     font-family: var(--mono);
     font-size: 0.72rem;
@@ -285,16 +285,16 @@
     flex-direction: column-reverse;
     gap: 3px;
   }
-
+ 
   #log::-webkit-scrollbar { width: 4px; }
   #log::-webkit-scrollbar-track { background: transparent; }
   #log::-webkit-scrollbar-thumb { background: var(--border); }
-
+ 
   .log-entry { display: flex; gap: 16px; }
   .log-ts { color: #444; min-width: 90px; }
   .log-data { color: #777; }
   .log-entry.new .log-data { color: #aaa; }
-
+ 
   /* No-BLE warning */
   .no-ble {
     display: none;
@@ -307,7 +307,7 @@
     color: #ff6b6b;
     line-height: 1.7;
   }
-
+ 
   footer {
     padding: 16px 32px;
     border-top: 1px solid var(--border);
@@ -317,13 +317,13 @@
     display: flex;
     justify-content: space-between;
   }
-
+ 
   .hz-counter {
     font-family: var(--mono);
     font-size: 0.65rem;
     color: var(--muted);
   }
-
+ 
   @media (max-width: 600px) {
     main { grid-template-columns: 1fr; padding: 16px; }
     .metric-card.spm .metric-value { font-size: 5rem; }
@@ -333,7 +333,7 @@
 </style>
 </head>
 <body>
-
+ 
 <header>
   <div class="logo">open<span>Row</span> <span style="font-weight:300;font-size:1rem;color:#555;">LIVE</span></div>
   <div style="display:flex;align-items:center;gap:16px;">
@@ -344,45 +344,45 @@
     <button class="connect-btn" id="connectBtn" onclick="toggleConnect()">Connect</button>
   </div>
 </header>
-
+ 
 <div class="config-bar">
   <span class="config-label">Service UUID</span>
   <input class="config-input" id="serviceUUID" value="YOUR-SERVICE-UUID-HERE" spellcheck="false">
   <span class="config-label">Char UUID</span>
   <input class="config-input" id="charUUID" value="YOUR-CHAR-UUID-HERE" spellcheck="false">
 </div>
-
+ 
 <main>
-
+ 
   <div class="no-ble" id="noBleWarning">
     ⚠ Web Bluetooth is not supported in this browser. Please use Chrome on desktop or Android.
     Safari and Firefox do not support Web Bluetooth.
   </div>
-
+ 
   <div class="metric-card spm">
     <div class="metric-label">Strokes per Minute</div>
     <div class="metric-value" id="valSPM">--</div>
     <div class="metric-unit">SPM</div>
   </div>
-
+ 
   <div class="metric-card acc">
     <div class="metric-label">Acceleration</div>
     <div class="metric-value" id="valAcc">--</div>
     <div class="metric-unit">m/s²  resultant</div>
   </div>
-
+ 
   <div class="metric-card force">
     <div class="metric-label">Force</div>
     <div class="metric-value" id="valForce">--</div>
     <div class="metric-unit">Newtons</div>
   </div>
-
+ 
   <div class="metric-card time">
-    <div class="metric-label"> Uptime</div>
+    <div class="metric-label">Device Uptime</div>
     <div class="metric-value" id="valTime">--</div>
     <div class="metric-unit">ms since boot &nbsp;·&nbsp; <span id="hzDisplay">-- Hz</span></div>
   </div>
-
+ 
   <div class="log-panel">
     <div class="log-header">
       <span>Raw Data Log</span>
@@ -390,87 +390,87 @@
     </div>
     <div id="log"></div>
   </div>
-
+ 
 </main>
-
+ 
 <footer>
   <span>openRow V5 · Web Bluetooth Dashboard</span>
   <span id="packetCount">0 packets received</span>
 </footer>
-
+ 
 <script>
-  let  = null;
+  let device = null;
   let characteristic = null;
   let packetCount = 0;
   let lastPacketTime = 0;
   let hzSamples = [];
-
+ 
   // Check Web Bluetooth support
   if (!navigator.bluetooth) {
     document.getElementById('noBleWarning').style.display = 'block';
     document.getElementById('connectBtn').disabled = true;
   }
-
+ 
   async function toggleConnect() {
-    if ( && .gatt.connected) {
-      .gatt.disconnect();
+    if (device && device.gatt.connected) {
+      device.gatt.disconnect();
       onDisconnected();
     } else {
       await connect();
     }
   }
-
+ 
   async function connect() {
     const serviceUUID = document.getElementById('serviceUUID').value.trim().toLowerCase();
     const charUUID = document.getElementById('charUUID').value.trim().toLowerCase();
-
+ 
     setStatus('connecting');
     try {
       device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [serviceUUID]
+        acceptAllDevices: true,
+        optionalServices: [serviceUUID]
       });
-
+ 
       device.addEventListener('gattserverdisconnected', onDisconnected);
-
+ 
       const server = await device.gatt.connect();
       const service = await server.getPrimaryService(serviceUUID);
       characteristic = await service.getCharacteristic(charUUID);
-
+ 
       await characteristic.startNotifications();
       characteristic.addEventListener('characteristicvaluechanged', onData);
-
+ 
       setStatus('connected');
       logEntry('system', 'Connected to openRow');
-
+ 
     } catch (err) {
       setStatus('disconnected');
       logEntry('error', err.message);
     }
   }
-
+ 
   function onDisconnected() {
     setStatus('disconnected');
     logEntry('system', 'Disconnected');
     characteristic = null;
   }
-
+ 
   function onData(event) {
     const decoder = new TextDecoder('utf-8');
     const raw = decoder.decode(event.target.value);
-
+ 
     const parts = raw.split(',');
     if (parts.length >= 4) {
       const ts    = parts[0].trim();
       const spm   = parseFloat(parts[1]).toFixed(1);
       const acc   = parseFloat(parts[2]).toFixed(2);
       const force = parseFloat(parts[3]).toFixed(1);
-
+ 
       flashUpdate('valSPM',   spm);
       flashUpdate('valAcc',   acc);
       flashUpdate('valForce', force);
       document.getElementById('valTime').textContent = parseInt(ts).toLocaleString();
-
+ 
       // Hz calculation
       const now = performance.now();
       if (lastPacketTime) {
@@ -480,14 +480,14 @@
         document.getElementById('hzDisplay').textContent = avgHz.toFixed(1) + ' Hz';
       }
       lastPacketTime = now;
-
+ 
       packetCount++;
       document.getElementById('packetCount').textContent = packetCount.toLocaleString() + ' packets received';
-
+ 
       logEntry('data', raw.trim());
     }
   }
-
+ 
   function flashUpdate(id, value) {
     const el = document.getElementById(id);
     el.textContent = value;
@@ -496,14 +496,14 @@
     el.classList.add('flash');
     setTimeout(() => el.classList.remove('flash'), 150);
   }
-
+ 
   function setStatus(state) {
     const dot  = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     const btn  = document.getElementById('connectBtn');
-
+ 
     dot.className = 'status-dot ' + state;
-
+ 
     if (state === 'connected') {
       text.textContent = 'CONNECTED';
       btn.textContent = 'Disconnect';
@@ -520,7 +520,7 @@
       btn.disabled = false;
     }
   }
-
+ 
   const logEl = document.getElementById('log');
   function logEntry(type, msg) {
     const entry = document.createElement('div');
@@ -532,7 +532,7 @@
     // Keep log from growing too large
     while (logEl.children.length > 200) logEl.removeChild(logEl.lastChild);
   }
-
+ 
   function clearLog() {
     logEl.innerHTML = '';
     packetCount = 0;
@@ -541,3 +541,4 @@
 </script>
 </body>
 </html>
+ 
