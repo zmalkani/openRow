@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>openRow Live</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
-    --panel: #111111;
-    --border: #222222;
-    --accent: #e63329;
-    --accent2: #ff6b35;
-    --text: #f0ece4;
-    --muted: #555;
-    --mono: 'Share Tech Mono', monospace;
-    --display: 'Barlow Condensed', sans-serif;
+    --bg: #ffffff;
+    --panel: #f4f6f9;
+    --panel2: #eef1f6;
+    --border: #dde2ea;
+    --accent: #1a5cff;
+    --text: #0d0d0d;
+    --muted: #8a93a8;
+    --mono: 'DM Mono', monospace;
+    --display: 'Outfit', sans-serif;
   }
  
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,155 +27,139 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
-  }
- 
-  /* Subtle grain overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 100;
-    opacity: 0.4;
   }
  
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
-    position: relative;
+    padding: 18px 32px;
+    border-bottom: 2px solid var(--text);
+    background: var(--bg);
   }
  
-  header::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 120px;
-    height: 2px;
-    background: var(--accent);
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
   }
  
-  .logo {
+  .logo-svg { height: 44px; width: auto; }
+ 
+  .logo-text {
     font-family: var(--display);
     font-weight: 800;
-    font-size: 1.6rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 1.7rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1;
   }
  
-  .logo span {
-    color: var(--accent);
+  .logo-text span { color: var(--accent); }
+ 
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+ 
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
  
   .status-bar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     font-family: var(--mono);
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--muted);
   }
  
   .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: var(--muted);
     transition: background 0.3s;
+    flex-shrink: 0;
   }
  
-  .status-dot.connected { background: #4ade80; box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite; }
-  .status-dot.connecting { background: var(--accent2); animation: blink 0.5s infinite; }
+  .status-dot.connected { background: #16a34a; box-shadow: 0 0 0 3px #dcfce7; animation: pulse 2s infinite; }
+  .status-dot.connecting { background: #f59e0b; animation: blink 0.5s infinite; }
  
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
-  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
  
   .connect-btn {
     font-family: var(--display);
     font-weight: 600;
     font-size: 0.85rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    padding: 10px 24px;
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
+    letter-spacing: 0.03em;
+    padding: 10px 22px;
+    background: var(--text);
+    border: 2px solid var(--text);
+    color: #fff;
     cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
+    border-radius: 4px;
+    transition: all 0.18s;
   }
  
-  .connect-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--accent);
-    transform: translateX(-100%);
-    transition: transform 0.2s;
-    z-index: -1;
-  }
- 
-  .connect-btn:hover { color: #fff; }
-  .connect-btn:hover::before { transform: translateX(0); }
-  .connect-btn:disabled { border-color: var(--muted); color: var(--muted); cursor: not-allowed; }
-  .connect-btn:disabled::before { display: none; }
+  .connect-btn:hover { background: var(--accent); border-color: var(--accent); }
+  .connect-btn:disabled { background: var(--muted); border-color: var(--muted); cursor: not-allowed; }
  
   .connect-btn.connected {
-    border-color: #4ade80;
-    color: #4ade80;
+    background: #fff;
+    border-color: #16a34a;
+    color: #16a34a;
   }
-  .connect-btn.connected::before { background: #4ade80; }
-  .connect-btn.connected:hover { color: #000; }
+  .connect-btn.connected:hover { background: #16a34a; color: #fff; }
  
-  /* UUID config */
   .config-bar {
-    padding: 12px 32px;
+    padding: 10px 32px;
     border-bottom: 1px solid var(--border);
     display: flex;
     gap: 16px;
     align-items: center;
     flex-wrap: wrap;
+    background: var(--panel);
   }
  
   .config-label {
     font-family: var(--mono);
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     white-space: nowrap;
   }
  
   .config-input {
     font-family: var(--mono);
     font-size: 0.72rem;
-    background: var(--panel);
+    background: #fff;
     border: 1px solid var(--border);
     color: var(--text);
     padding: 6px 10px;
     flex: 1;
     min-width: 260px;
     outline: none;
+    border-radius: 3px;
     transition: border-color 0.2s;
   }
- 
   .config-input:focus { border-color: var(--accent); }
  
-  /* Main grid */
   main {
     flex: 1;
-    padding: 32px;
+    padding: 28px 32px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
     gap: 16px;
-    max-width: 1000px;
+    max-width: 1040px;
     width: 100%;
     margin: 0 auto;
   }
@@ -183,35 +167,25 @@
   .metric-card {
     background: var(--panel);
     border: 1px solid var(--border);
-    padding: 28px 32px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.3s;
+    border-top: 3px solid var(--border);
+    padding: 24px 28px 20px;
+    border-radius: 6px;
+    transition: box-shadow 0.2s;
   }
+  .metric-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.07); }
  
-  .metric-card:hover { border-color: #333; }
- 
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 3px;
-    height: 100%;
-    background: var(--accent);
-    opacity: 0.6;
-  }
- 
-  .metric-card.acc::before { background: #3b82f6; }
-  .metric-card.force::before { background: var(--accent2); }
-  .metric-card.time::before { background: #a855f7; }
+  .metric-card.spm   { border-top-color: #e63329; }
+  .metric-card.acc   { border-top-color: #1a5cff; }
+  .metric-card.force { border-top-color: #f97316; }
+  .metric-card.time  { border-top-color: #a855f7; }
  
   .metric-label {
     font-family: var(--mono);
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.2em;
-    margin-bottom: 8px;
+    letter-spacing: 0.18em;
+    margin-bottom: 10px;
   }
  
   .metric-value {
@@ -219,45 +193,44 @@
     font-weight: 800;
     font-size: 5rem;
     line-height: 1;
-    letter-spacing: -0.02em;
-    transition: color 0.15s;
+    letter-spacing: -0.03em;
+    transition: opacity 0.1s;
   }
- 
-  .metric-value.flash { color: var(--accent) !important; }
+  .metric-value.flash { opacity: 0.4; }
  
   .metric-unit {
     font-family: var(--mono);
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: var(--muted);
-    margin-top: 6px;
-    letter-spacing: 0.1em;
+    margin-top: 8px;
+    letter-spacing: 0.08em;
   }
  
-  .metric-card.spm .metric-value { color: var(--accent); font-size: 7rem; }
-  .metric-card.acc .metric-value { color: #3b82f6; }
-  .metric-card.force .metric-value { color: var(--accent2); }
-  .metric-card.time .metric-value { font-size: 2.2rem; color: #a855f7; font-weight: 300; }
+  .metric-card.spm .metric-value   { color: #e63329; font-size: 7rem; }
+  .metric-card.acc .metric-value   { color: #1a5cff; }
+  .metric-card.force .metric-value { color: #f97316; }
+  .metric-card.time .metric-value  { color: #a855f7; font-size: 2.2rem; font-weight: 400; }
  
-  /* Log panel */
   .log-panel {
     grid-column: 1 / -1;
     background: var(--panel);
     border: 1px solid var(--border);
-    padding: 0;
+    border-radius: 6px;
     overflow: hidden;
   }
  
   .log-header {
-    padding: 12px 20px;
+    padding: 10px 18px;
     border-bottom: 1px solid var(--border);
     font-family: var(--mono);
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.15em;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background: var(--panel2);
   }
  
   .clear-btn {
@@ -270,80 +243,88 @@
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    transition: all 0.2s;
+    border-radius: 3px;
+    transition: all 0.18s;
   }
   .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
  
   #log {
     font-family: var(--mono);
     font-size: 0.72rem;
-    color: #888;
-    height: 160px;
+    color: var(--muted);
+    height: 150px;
     overflow-y: auto;
-    padding: 12px 20px;
+    padding: 10px 18px;
     display: flex;
     flex-direction: column-reverse;
     gap: 3px;
   }
- 
   #log::-webkit-scrollbar { width: 4px; }
-  #log::-webkit-scrollbar-track { background: transparent; }
-  #log::-webkit-scrollbar-thumb { background: var(--border); }
+  #log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
  
   .log-entry { display: flex; gap: 16px; }
-  .log-ts { color: #444; min-width: 90px; }
-  .log-data { color: #777; }
-  .log-entry.new .log-data { color: #aaa; }
+  .log-ts { color: var(--border); min-width: 90px; }
+  .log-data { color: #aaa; }
+  .log-entry.new .log-data { color: var(--text); }
+  .log-entry.system .log-data { color: var(--accent); }
+  .log-entry.error .log-data { color: #e63329; }
  
-  /* No-BLE warning */
   .no-ble {
     display: none;
     grid-column: 1 / -1;
-    background: #1a0a0a;
-    border: 1px solid #5a1a1a;
-    padding: 20px 24px;
+    background: #fff5f5;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    padding: 16px 20px;
     font-family: var(--mono);
-    font-size: 0.8rem;
-    color: #ff6b6b;
+    font-size: 0.78rem;
+    color: #dc2626;
     line-height: 1.7;
   }
  
   footer {
-    padding: 16px 32px;
+    padding: 14px 32px;
     border-top: 1px solid var(--border);
     font-family: var(--mono);
-    font-size: 0.65rem;
-    color: #333;
+    font-size: 0.62rem;
+    color: var(--muted);
     display: flex;
     justify-content: space-between;
-  }
- 
-  .hz-counter {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    color: var(--muted);
+    background: var(--panel);
   }
  
   @media (max-width: 600px) {
     main { grid-template-columns: 1fr; padding: 16px; }
     .metric-card.spm .metric-value { font-size: 5rem; }
-    .config-bar { padding: 12px 16px; }
-    header { padding: 16px; }
+    header, .config-bar { padding: 14px 16px; }
   }
 </style>
 </head>
 <body>
  
 <header>
-  <div class="logo">open<span>Row</span> <span style="font-weight:300;font-size:1rem;color:#555;">LIVE</span></div>
-  <div style="display:flex;align-items:center;gap:16px;">
+  <div class="logo-area">
+    <svg class="logo-svg" viewBox="0 0 960 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#000" d="M343.24 34.14h303.53v646.83H343.24z"/>
+      <path fill="#000" d="M0 357.56c0-178.62 144.8-323.42 323.42-323.42 85.78 0 168.04 34.07 228.69 94.73 60.65 60.65 94.73 142.91 94.73 228.69 0 178.62-144.8 323.42-323.42 323.42C144.8 680.98 0 536.18 0 357.56z"/>
+      <path fill="#fff" d="M166.62 357.56c0-89.81 72.8-162.61 162.61-162.61 43.13 0 84.49 17.13 114.99 47.63 30.5 30.5 47.63 71.86 47.63 114.98 0 89.81-72.8 162.61-162.61 162.61-89.81 0-162.62-72.8-162.62-162.61z"/>
+      <path fill="#000" d="M642.38 34.14c84.55 0 162.53 44.15 204.05 115.53 41.52 71.37 40.14 158.89-3.62 229-43.76 70.11-123.1 111.92-207.61 109.41l4.54-143.6c32.66.87 63.3-14.5 80.18-40.25 16.88-25.74 17.39-57.86 1.33-84.04-16.06-26.18-46.2-42.38-78.88-42.38V34.14z"/>
+      <path fill="#000" d="M756.88 680.98 616.69 535.63V325.04l343.31 355.94H756.88z"/>
+      <path fill="#000" d="M408.11 470.22H250.9v-41.13h49.66V304.61H250.9v-38.44q11.39 0 21.83-1.34 10.44-1.34 17.39-4.66 8.23-3.95 12.34-10.28 4.11-6.33 4.75-15.83h52.34v195.03h48.56v41.13z"/>
+    </svg>
+    <div>
+      <div class="logo-text">open<span>Row</span></div>
+      <div class="logo-sub">Live Dashboard</div>
+    </div>
+  </div>
+ 
+  <div class="header-right">
     <div class="status-bar">
       <div class="status-dot" id="statusDot"></div>
-      <span id="statusText">DISCONNECTED</span>
+      <span id="statusText">disconnected</span>
     </div>
     <button class="connect-btn" id="connectBtn">Connect</button>
   </div>
-  
 </header>
  
 <div class="config-bar">
@@ -354,10 +335,8 @@
 </div>
  
 <main>
- 
   <div class="no-ble" id="noBleWarning">
-    ⚠ Web Bluetooth is not supported in this browser. Please use Chrome on desktop or Android.
-    Safari and Firefox do not support Web Bluetooth.
+    ⚠ Web Bluetooth is not supported in this browser. Please use Chrome on desktop or Android. Safari and Firefox do not support Web Bluetooth.
   </div>
  
   <div class="metric-card spm">
@@ -391,7 +370,6 @@
     </div>
     <div id="log"></div>
   </div>
- 
 </main>
  
 <footer>
@@ -401,17 +379,17 @@
  
 <script>
   let device = null;
-  document.getElementById('connectBtn').addEventListener('click', toggleConnect);
   let characteristic = null;
   let packetCount = 0;
   let lastPacketTime = 0;
   let hzSamples = [];
  
-  // Check Web Bluetooth support
   if (!navigator.bluetooth) {
     document.getElementById('noBleWarning').style.display = 'block';
     document.getElementById('connectBtn').disabled = true;
   }
+ 
+  document.getElementById('connectBtn').addEventListener('click', toggleConnect);
  
   async function toggleConnect() {
     if (device && device.gatt.connected) {
@@ -424,27 +402,21 @@
  
   async function connect() {
     const serviceUUID = document.getElementById('serviceUUID').value.trim().toLowerCase();
-    const charUUID = document.getElementById('charUUID').value.trim().toLowerCase();
- 
+    const charUUID    = document.getElementById('charUUID').value.trim().toLowerCase();
     setStatus('connecting');
     try {
       device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [serviceUUID]
       });
- 
       device.addEventListener('gattserverdisconnected', onDisconnected);
- 
       const server = await device.gatt.connect();
       const service = await server.getPrimaryService(serviceUUID);
       characteristic = await service.getCharacteristic(charUUID);
- 
       await characteristic.startNotifications();
       characteristic.addEventListener('characteristicvaluechanged', onData);
- 
       setStatus('connected');
       logEntry('system', 'Connected to openRow');
- 
     } catch (err) {
       setStatus('disconnected');
       logEntry('error', err.message);
@@ -458,9 +430,7 @@
   }
  
   function onData(event) {
-    const decoder = new TextDecoder('utf-8');
-    const raw = decoder.decode(event.target.value);
- 
+    const raw = new TextDecoder('utf-8').decode(event.target.value);
     const parts = raw.split(',');
     if (parts.length >= 4) {
       const ts    = parts[0].trim();
@@ -473,19 +443,17 @@
       flashUpdate('valForce', force);
       document.getElementById('valTime').textContent = parseInt(ts).toLocaleString();
  
-      // Hz calculation
       const now = performance.now();
       if (lastPacketTime) {
         hzSamples.push(1000 / (now - lastPacketTime));
         if (hzSamples.length > 20) hzSamples.shift();
-        const avgHz = hzSamples.reduce((a,b) => a+b, 0) / hzSamples.length;
+        const avgHz = hzSamples.reduce((a,b)=>a+b,0) / hzSamples.length;
         document.getElementById('hzDisplay').textContent = avgHz.toFixed(1) + ' Hz';
       }
       lastPacketTime = now;
  
       packetCount++;
       document.getElementById('packetCount').textContent = packetCount.toLocaleString() + ' packets received';
- 
       logEntry('data', raw.trim());
     }
   }
@@ -494,44 +462,43 @@
     const el = document.getElementById(id);
     el.textContent = value;
     el.classList.remove('flash');
-    void el.offsetWidth; // reflow to restart animation
+    void el.offsetWidth;
     el.classList.add('flash');
-    setTimeout(() => el.classList.remove('flash'), 150);
+    setTimeout(() => el.classList.remove('flash'), 120);
   }
  
   function setStatus(state) {
     const dot  = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     const btn  = document.getElementById('connectBtn');
- 
     dot.className = 'status-dot ' + state;
- 
     if (state === 'connected') {
-      text.textContent = 'CONNECTED';
-      btn.textContent = 'Disconnect';
-      btn.className = 'connect-btn connected';
+      text.textContent = 'connected';
+      btn.textContent  = 'Disconnect';
+      btn.className    = 'connect-btn connected';
+      btn.disabled     = false;
     } else if (state === 'connecting') {
-      text.textContent = 'CONNECTING...';
-      btn.textContent = 'Connecting...';
-      btn.className = 'connect-btn';
-      btn.disabled = true;
+      text.textContent = 'connecting...';
+      btn.textContent  = 'Connecting...';
+      btn.className    = 'connect-btn';
+      btn.disabled     = true;
     } else {
-      text.textContent = 'DISCONNECTED';
-      btn.textContent = 'Connect';
-      btn.className = 'connect-btn';
-      btn.disabled = false;
+      text.textContent = 'disconnected';
+      btn.textContent  = 'Connect';
+      btn.className    = 'connect-btn';
+      btn.disabled     = false;
     }
   }
  
   const logEl = document.getElementById('log');
+ 
   function logEntry(type, msg) {
     const entry = document.createElement('div');
-    entry.className = 'log-entry new';
-    const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    entry.className = 'log-entry new ' + type;
+    const ts = new Date().toLocaleTimeString('en-US', { hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
     entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-data">${msg}</span>`;
     logEl.prepend(entry);
-    setTimeout(() => entry.classList.remove('new'), 500);
-    // Keep log from growing too large
+    setTimeout(() => entry.classList.remove('new'), 400);
     while (logEl.children.length > 200) logEl.removeChild(logEl.lastChild);
   }
  
