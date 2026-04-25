@@ -118,6 +118,40 @@
     color: #16a34a;
   }
   .connect-btn.connected:hover { background: #16a34a; color: #fff; }
+
+  .export-btn {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    padding: 10px 22px;
+    background: #fff;
+    border: 2px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .export-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .export-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .export-btn svg {
+    width: 14px; height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
  
   .config-bar {
     padding: 10px 32px;
@@ -297,6 +331,8 @@
     main { grid-template-columns: 1fr; padding: 16px; }
     .metric-card.spm .metric-value { font-size: 5rem; }
     header, .config-bar { padding: 14px 16px; }
+    .header-right { gap: 8px; }
+    .export-btn span { display: none; }
   }
 </style>
 </head>
@@ -323,6 +359,10 @@
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">disconnected</span>
     </div>
+    <button class="export-btn" id="exportBtn" disabled title="Export all collected data as CSV">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Export CSV</span>
+    </button>
     <button class="connect-btn" id="connectBtn">Connect</button>
   </div>
 </header>
@@ -383,6 +423,10 @@
   let packetCount = 0;
   let lastPacketTime = 0;
   let hzSamples = [];
+
+  // CSV storage — every valid packet is pushed here
+  const csvRows = [];
+  const CSV_HEADER = 'wall_time,device_uptime_ms,spm,acceleration_ms2,force_n';
  
   if (!navigator.bluetooth) {
     document.getElementById('noBleWarning').style.display = 'block';
@@ -390,6 +434,7 @@
   }
  
   document.getElementById('connectBtn').addEventListener('click', toggleConnect);
+  document.getElementById('exportBtn').addEventListener('click', exportCSV);
  
   async function toggleConnect() {
     if (device && device.gatt.connected) {
@@ -442,6 +487,11 @@
       flashUpdate('valAcc',   acc);
       flashUpdate('valForce', force);
       document.getElementById('valTime').textContent = parseInt(ts).toLocaleString();
+
+      // Record to CSV buffer with wall-clock timestamp
+      const wallTime = new Date().toISOString();
+      csvRows.push(`${wallTime},${ts},${spm},${acc},${force}`);
+      document.getElementById('exportBtn').disabled = false;
  
       const now = performance.now();
       if (lastPacketTime) {
@@ -456,6 +506,21 @@
       document.getElementById('packetCount').textContent = packetCount.toLocaleString() + ' packets received';
       logEntry('data', raw.trim());
     }
+  }
+ 
+  function exportCSV() {
+    if (csvRows.length === 0) return;
+    const content = CSV_HEADER + '\n' + csvRows.join('\n');
+    const blob = new Blob([content], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const now  = new Date();
+    const stamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href     = url;
+    a.download = `openrow_${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logEntry('system', `Exported ${csvRows.length} rows → openrow_${stamp}.csv`);
   }
  
   function flashUpdate(id, value) {
@@ -506,8 +571,8 @@
     logEl.innerHTML = '';
     packetCount = 0;
     document.getElementById('packetCount').textContent = '0 packets received';
+    // Note: clears the display log only — CSV buffer is preserved
   }
 </script>
 </body>
 </html>
- 
