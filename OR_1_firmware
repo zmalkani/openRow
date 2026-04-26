@@ -1,6 +1,6 @@
-//Project: openRow V5 Software for ESP32 on protoboard
+//Project: openRow V5 Software for ESP32 on protoboard device
 //Author : Zach Malkani '27
-//MCU: ESP32 (Core0: Display Writing, Core1: Data Gathering)
+//MCU: ESP32
 
 //libraries
 #include <Adafruit_GFX.h>
@@ -11,8 +11,12 @@
 #include <Wire.h>
 #include <Adafruit_NAU7802.h>
 
+#include <NimBLEDevice.h>
+
 //graphics
 #include "openrow_logo_120x90.h"  //logo bitmap
+#include "Org_01.h"               //font 1
+#include "Petme8x8.h"             // font 2
 
 
 //tft defs
@@ -22,6 +26,7 @@
 #define TFT_mosi 26
 #define TFT_sck 25
 #define TFT_miso 32
+
 
 //NAU7802 defs
 int32_t zeroOffset = -3656;
@@ -34,101 +39,71 @@ float Vbatt;
 float currentForce;
 float lastForce;
 uint32_t lastMillis;
-uint8_t xPos = 10;
-uint8_t yPos = 0;
-float yankThreshold = 0.05;
+uint16_t xPos = 10;
+uint16_t yPos = 0;
 
-volatile bool newSPM = false;
-volatile uint8_t currentSPM;
-uint8_t lastSPM;
+uint8_t currentSPM;
 uint8_t SPMbuffer = 3;
 uint8_t SPMi = 0;
-float mpuXthreshold = 30;
-float mpuYthreshold = 25;
-float mpuZthreshold = 30;
-float resThreshold = 4;
 
-float accX;
-float accY;
-float accZ;
-
-float accXlast;
-float accYlast;
-float accZlast;
-
+float strokeForceSum = 0;
+uint32_t strokeSampleCount = 0;
+float peakForce = 0;
+float avgForce = 0;
+bool prevLastLoopStroke = false;
+float peakAcc = 0;
+float minAcc = 0;
+float currentAcc = 0;
+bool firstAccSample = true;
 bool lastLoopStroke = false;
 bool firstStroke = true;
 uint32_t cT;
 uint32_t lastInputTime;
 uint8_t dbDelay = 800;
 float rawSPM;
+bool dataMode = false;
+// BLE setup
+BLECharacteristic *pCharacteristic;
+#define BLE_SERVICE_UUID "12345678-1234-5678-1234-56789abcdef0"
+#define BLE_CHARACTERISTIC_UUID "abcdef01-1234-5678-1234-56789abcdef0"
 
-// Impulse logic variables
-uint32_t impulseStartTime = 0;
-bool checkingImpulse = false;
-uint32_t impulseThreshold = 30;  // ms acceleration must stay above threshold
-
-SemaphoreHandle_t tftMutex;
-
-//initialize input objects
+//initialize input device objects
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_cs, TFT_dc, TFT_mosi, TFT_sck, TFT_rst, TFT_miso);  // display
 Adafruit_NAU7802 nau;                                                                           //load cell amp.
 Adafruit_MPU6050 mpu;                                                                           //accelerometer
 
-
-void displayTask(void *pvParameters) {
-  for (;;) {  //empty conditions -> infinite loop
-    if (newSPM) {
-      writeSPM(currentSPM);
-      newSPM = false;
-    }
-    vTaskDelay(pdMS_TO_TICKS(50));
-  }
-}
-
-void writeSPM(uint8_t spm) {
-  tft.setCursor(10, 155);
-  tft.setTextSize(8);
-  tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
-  spm = constrain(spm, 0, 99);
-  tft.print(spm);
-}
-
 void setup() {
   Serial.begin(baud);
+  dataMode = digitalRead(15); //read datamode switch
+  Wire.begin(18, 19); //startup i2c protocol on 18 and 19
 
-  Wire.begin(18, 19);
-
-  //try init. both i2c devices (mpu, load cell amp.)
+  //try init. both i2c devices (mpu, load cell amp.) with small delay so startup doesn't miss 
+  Serial.println("Starting MPU....");
   if (!mpu.begin()) {
     Serial.println("MPU startup error");
     while (1) {
       delay(10);
     }
   }
+  Serial.println("Starting NAU....");
   if (!nau.begin()) {
     Serial.println("NAU7802 failed");
     while (1) {
       delay(10);
     }
   }
-
   mpu.setAccelerometerRange(MPU6050_RANGE_4_G);
-
   nau.setGain(NAU7802_GAIN_128);
   nau.setRate(NAU7802_RATE_320SPS);
   while (!nau.calibrate(NAU7802_CALMOD_INTERNAL))
     ;
   delay(100);
-
   zeroOffset = nau.read();  //read zero
-
+  Serial.println("Drawing intro screen...");
   tft.begin();
   tft.setRotation(1);
-  tft.fillScreen(ILI9341_WHITE);
   tft.drawRGBBitmap(150, 0, openrow_logo, LOGO_W, LOGO_H);
   delay(1000);
-
   tft.setTextColor(ILI9341_BLACK);
   tft.setCursor(10, 150);
   tft.setTextSize(3);
@@ -137,33 +112,109 @@ void setup() {
   tft.setTextSize(1);
   tft.println("Author: Zach Malkani - ACES '27");
   tft.setCursor(10, 190);
-  tft.print("V4 Firmware - Prototype Hardware");
-  delay(2000);
+  tft.print("V5 Firmware - Prototype Hardware");
+  delay(1500);
   tft.fillScreen(ILI9341_WHITE);
 
-  tft.setTextColor(ILI9341_BLACK);
-  tft.setCursor(2, 60);
-  tft.setTextSize(1);
-  tft.print("N");
-  tft.setCursor(140, 121);
-  tft.print("time (s)");
-  tft.drawRect(10, 5, 300, 115, ILI9341_BLACK);
-  tft.drawRect(11, 6, 298, 113, ILI9341_BLACK);
+  if (!dataMode) {
+    Serial.println("Force Curve Mode ");
+    
+    tft.drawRect(11, 0, 311, 224, 0x0);
 
-  tft.drawRGBBitmap(180, 140, openrow_logo, LOGO_W, LOGO_H);
+    tft.drawRect(12, 0, 311, 222, 0x0);
 
-  tft.drawLine(0, 130, 320, 130, ILI9341_BLACK);
-  tft.drawRect(0, 131, 109, 109, ILI9341_BLACK);
-  tft.setCursor(40, 220);
-  tft.setTextSize(2);
-  tft.print("spm");
-  tft.setCursor(10, 155);
-  tft.setTextSize(8);
-  tft.setTextColor(ILI9341_BLACK);
-  tft.print("00");
+    tft.drawRect(10, -1, 311, 224, 0x0);
 
-  tftMutex = xSemaphoreCreateMutex();
-  xTaskCreatePinnedToCore(displayTask, "DisplayTask", 10000, NULL, 1, NULL, 0);
+    tft.setTextColor(0x0);
+    tft.setTextWrap(false);
+    tft.setCursor(2, 102);
+    tft.print("N");
+
+    tft.setCursor(124, 229);
+    tft.print("Time (s)");
+  }
+
+  if (dataMode) {
+
+    tft.setTextColor(0x0);
+    tft.setTextSize(8);
+    tft.setTextWrap(false);
+    tft.setCursor(22, 22);
+
+    tft.setTextSize(2);
+    tft.setFont(&Petme8x8);
+    tft.setCursor(1, 99);
+    tft.print("spm");
+
+    tft.drawLine(0, 0, 0, 0, 0xFFFF);
+
+    tft.drawLine(140, 238, 148, 10, 0xFFFF);
+
+    tft.fillRect(141, 0, 6, 240, 0x0);
+
+    tft.fillRect(-4, 101, 147, 7, 0x0);
+
+    tft.fillRect(145, 145, 177, 7, 0x0);
+
+    tft.fillRect(144, 71, 177, 7, 0x0);
+
+    tft.fillRect(143, 210, 177, 7, 0x0);
+
+    tft.drawLine(0, 0, 0, 0, 0xF206);
+
+    tft.setTextSize(1);
+    tft.setCursor(151, 68);
+    tft.print("max m/s^2");
+
+    tft.setTextSize(5);
+    tft.setFont();
+    tft.setCursor(218, 10);
+   
+
+    tft.setTextSize(1);
+    tft.setFont(&Petme8x8);
+    tft.setCursor(151, 142);
+    tft.print("min m/s^2");
+
+    tft.setTextSize(5);
+    tft.setFont();
+    tft.setCursor(222, 94);
+
+    tft.setTextSize(1);
+    tft.setFont(&Petme8x8);
+    tft.setCursor(11, 220);
+    tft.print("avg. force");
+
+    tft.setTextSize(8);
+    tft.setFont();
+    tft.setCursor(2, 137);
+
+    tft.setTextSize(6);
+    tft.setCursor(171, 157);
+
+    tft.setTextSize(1);
+    tft.setFont(&Petme8x8);
+    tft.setCursor(148, 209);
+    tft.print("peak force");
+  }
+
+  //BLE broadcast service setup
+  delay(1000);  //power buffer
+  BLEDevice::init("openRow unit 1");
+  
+  BLEServer *pServer = BLEDevice::createServer();
+
+  BLEService *pService = pServer->createService(BLE_SERVICE_UUID);
+  pCharacteristic = pService->createCharacteristic(
+    BLE_CHARACTERISTIC_UUID,
+    NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::NOTIFY);
+  pService->start();
+
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
+  pAdvertising->start();
+
+  Serial.println("BLE advertising as 'openRow'");
 }
 
 void loop() {
@@ -173,67 +224,64 @@ void loop() {
     // convert raw reading to newtons w/ formula :   ((raw - rawoffset) / calibration factor) * conversion to N
     currentForce = ((nau.read() - zeroOffset) / cbFactor) * 9.81;
   }
-  Serial.println(currentForce);
 
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  currentAcc = sqrt(sq(a.acceleration.x) + sq(a.acceleration.y) + sq(a.acceleration.z));
 
   //convert force reading into pixel scale
-  yPos = 120 - (currentForce * (115.0 / 1000.0));  // CHANGE DENOMENATOR TO CHANGE Y-AXIS SCALE
+  yPos = 221 - (currentForce * (216.0 / 1000.0));  // CHANGE DENOMINATOR TO CHANGE Y-AXIS SCALE
 
-  xPos++;  //x increment
+  xPos += 2;  //x increment
   //wrap around x axis
-  if (xPos > 355) {
+  if (xPos > 320) {
     xPos = 10;
   }
 
   //if no input reset to start
-  if (currentForce < 15) {
-    xPos = 10;
+  if (currentForce < 18) {
+    xPos = 13;
   }
 
-  yPos = constrain(yPos, 5, 118);
-
-  if (xSemaphoreTake(tftMutex, pdMS_TO_TICKS(10))) {
-    tft.drawFastVLine((xPos + 1), 7, 111, ILI9341_WHITE);
+  yPos = constrain(yPos, 5, 221);
+  if (!dataMode) {
+    tft.drawFastVLine((xPos + 2), 7, 215, ILI9341_WHITE);
+    tft.drawFastVLine((xPos + 1), 7, 215, ILI9341_WHITE);
+    //draws 3 adjacent pixels red, the middle one being the real data point and the other 3 on each side to make the line thicker
+    tft.drawPixel(xPos, yPos + 1, ILI9341_RED);
+    tft.drawPixel(xPos, yPos + 2, ILI9341_RED);
     tft.drawPixel(xPos, yPos, ILI9341_RED);
-    xSemaphoreGive(tftMutex);
+    tft.drawPixel(xPos, yPos + 2, ILI9341_RED);
+    tft.drawPixel(xPos, yPos - 1, ILI9341_RED);
+
+    tft.drawPixel(xPos + 1, yPos + 1, ILI9341_RED);
+    tft.drawPixel(xPos + 1, yPos + 2, ILI9341_RED);
+    tft.drawPixel(xPos + 1, yPos, ILI9341_RED);
+    tft.drawPixel(xPos + 1, yPos + 2, ILI9341_RED);
+    tft.drawPixel(xPos + 1, yPos - 1, ILI9341_RED);
   }
 
-  //refresh screen if quiet for a while
-  static uint32_t timeZeroForce = 0;
-  if (currentForce < 10) {
-    if (timeZeroForce == 0) { timeZeroForce = millis(); }
-    if (millis() - timeZeroForce > 5000) {
-      if (xSemaphoreTake(tftMutex, portMAX_DELAY)) {
-        tft.fillRect(12, 7, 296, 111, ILI9341_WHITE);
-        xSemaphoreGive(tftMutex);
+  //refresh screen if quiet for a while logic
+  if (!dataMode) {
+    static uint32_t timeZeroForce = 0;
+    if (currentForce < 10) {
+      if (timeZeroForce == 0) { timeZeroForce = millis(); }
+      if (millis() - timeZeroForce > 6000) {
+        tft.fillRect(14, 1, 307, 221, ILI9341_WHITE);
+        //reference variables: (int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
+        timeZeroForce = 0;
       }
+    } else {
       timeZeroForce = 0;
     }
-  } else {
-    timeZeroForce = 0;
   }
-
-
-
-
-  // Determine if threshold is met w/ REAL si unit name "yank" - meaning the 1st derivative of force (N/s)
-
-  float yank = 0;
-  uint32_t dt = cT - lastMillis;
-  if (dt >= 5) {
-    yank = (currentForce - lastForce) / (float)dt;
-  }
-  //bool overThreshold = (yank > yankThreshold);
-  //Serial.println(yank);
 
   bool overThreshold = (currentForce > 100 && lastForce <= 100);
 
+  //calculate SPM using modified MBC RPM calculation logic
   if (overThreshold && !lastLoopStroke) {
-    //Serial.println("OVER THRESHOLD");
     if (cT - lastInputTime > dbDelay) {
-      //Serial.println("PAST DEBOUNCE");
       if (lastInputTime != 0 || firstStroke) {
-        Serial.println("STROKE DETECTED");
         firstStroke = false;
         uint32_t dT = cT - lastInputTime;
         rawSPM = 60000.0 / (float)dT;
@@ -249,10 +297,69 @@ void loop() {
 
   // Update Display via Core 0
   currentSPM = (uint8_t)rawSPM;
-  if (currentSPM != lastSPM) {
-    writeSPM(currentSPM);
-    lastSPM = currentSPM;
+  if (dataMode) {
+    // accumulate Force values and max/min acceleration during stroke, 
+    // divide the sum by the number of samples when stroke ends, call that avgForce whilst we're at it
+    if (lastLoopStroke) {
+      strokeForceSum += currentForce;
+      strokeSampleCount++;
+      if (currentForce > peakForce) peakForce = currentForce;
+    }
+
+    if (lastLoopStroke) {
+      if (firstAccSample) {
+        minAcc = currentAcc;
+        firstAccSample = false;
+      }
+      if (currentAcc > peakAcc) peakAcc = currentAcc;
+      if (currentAcc < minAcc) minAcc = currentAcc;
+    }
+
+    // on stroke end, calculate and display
+    if (prevLastLoopStroke && !lastLoopStroke) {
+      if (strokeSampleCount > 0) avgForce = strokeForceSum / strokeSampleCount;
+
+      tft.setFont();
+      tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+      tft.setTextSize(8);
+      tft.setCursor(22, 20);
+      tft.print(currentSPM);
+
+      tft.setTextSize(7);
+      tft.setCursor(9, 142);
+      tft.print((int)avgForce);
+
+      tft.setTextSize(5);
+      tft.setCursor(181, 160);
+      tft.print((int)peakForce);
+
+      tft.setFont();
+      tft.setTextSize(5);
+      tft.setTextColor(ILI9341_BLACK, ILI9341_WHITE);
+      tft.setCursor(194, 10);
+      tft.print(peakAcc, 1);
+
+      tft.setCursor(194, 94);
+      tft.print(minAcc, 1);
+
+      // reset accumulators
+      strokeForceSum = 0;
+      strokeSampleCount = 0;
+      peakForce = 0;
+      peakAcc = 0;
+      minAcc = 0;
+      firstAccSample = true;
+    }
+
+    prevLastLoopStroke = lastLoopStroke;
   }
+
+  //BLE broadcast
+  char bleBuffer[64];
+  snprintf(bleBuffer, sizeof(bleBuffer), "%lu,%.1f,%.2f,%.2f",
+           (unsigned long)cT, (float)currentSPM, currentAcc, currentForce);
+  pCharacteristic->setValue(bleBuffer);
+  pCharacteristic->notify();
 
   if (SPMi > SPMbuffer) {
     SPMi = 0;
