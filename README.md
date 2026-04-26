@@ -1,6 +1,6 @@
-# openRow - Rowing Telemetry System [IN PROGRESS]
+# openRow - Rowing Telemetry System [In progress]
 Features:
-- Accurate Force Input detection and Force Curve displayed on Monitor
-- Strokes per Minute displayed on monitor
-- Split /500m displayed on monitor
-- Bluetooth HRM connection
+- Load Cell Integrated Oarlock
+- Acceleration Data
+- Key metrics displayed on monitor and broadcasted via BLE to a device on https://zmalkani.github.io/openRow  
+- Live wireless data reading on webpage with downloadable data via .CSV file for further analysis
