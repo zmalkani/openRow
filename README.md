@@ -1,4 +1,4 @@
-# openRow - Rowing Telemetry System [In progress]
+# openRow - Rowing Telemetry System [Project]
 Features:
 - Load Cell Integrated Oarlock
 - Acceleration Data
